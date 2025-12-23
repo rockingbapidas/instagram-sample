@@ -1,0 +1,82 @@
+package com.example.instagramclone.presentation
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.instagramclone.presentation.navigation.NavGraph
+import com.example.instagramclone.presentation.navigation.Screen
+
+@Composable
+fun InstagramApp(startDestination: String = Screen.Feed.route) {
+    val navController = rememberNavController()
+    
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController)
+        }
+    ) { paddingValues ->
+        NavGraph(
+            navController = navController,
+            modifier = Modifier.padding(paddingValues),
+            startDestination = startDestination
+        )
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(navController: NavController) {
+    val items = listOf(
+        Screen.Feed,
+        Screen.Search,
+        Screen.CreatePost,
+        Screen.Notifications,
+        Screen.Profile
+    )
+    
+    NavigationBar {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        
+        items.forEach { screen ->
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = when (screen) {
+                            Screen.Feed -> Icons.Default.Home
+                            Screen.Search -> Icons.Default.Search
+                            Screen.CreatePost -> Icons.Default.Add
+                            Screen.Notifications -> Icons.Default.Notifications
+                            Screen.Profile -> Icons.Default.Person
+                        },
+                        contentDescription = screen.route
+                    )
+                },
+                label = { Text(screen.route) },
+                selected = currentRoute == screen.route,
+                onClick = {
+                    if (currentRoute != screen.route) {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
+    }
+} 

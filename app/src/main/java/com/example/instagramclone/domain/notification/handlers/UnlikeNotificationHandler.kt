@@ -1,0 +1,41 @@
+package com.example.instagramclone.domain.notification.handlers
+
+import android.content.Context
+import android.content.Intent
+import com.example.instagramclone.domain.model.Notification
+import com.example.instagramclone.domain.model.NotificationType
+import com.example.instagramclone.domain.notification.NotificationHandler
+import com.example.instagramclone.presentation.MainActivity
+import javax.inject.Inject
+
+class UnlikeNotificationHandler @Inject constructor() : NotificationHandler {
+    override val notificationType: NotificationType = NotificationType.UNLIKE
+
+    override fun getHandleIntent(context: Context, notification: Notification): Intent? {
+        return notification.actionData?.postId?.let { postId ->
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("postId", postId)
+                putExtra("navigateTo", "post")
+            }
+        }
+    }
+
+    override fun handleAction(context: Context, notification: Notification) {
+        // Navigate to the post when user taps on unlike notification
+        getHandleIntent(context, notification)?.let { intent ->
+            context.startActivity(intent)
+        }
+    }
+
+    override fun getDefaultTitle(notification: Notification): String {
+        return notification.title.ifEmpty { "Unlike" }
+    }
+
+    override fun getDefaultMessage(notification: Notification): String {
+        return notification.message.ifEmpty {
+            "Someone unliked your post"
+        }
+    }
+}
+
