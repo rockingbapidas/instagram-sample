@@ -83,9 +83,12 @@ class FeedViewModel @Inject constructor(
                        endReached = true
                    )
                 } else {
+                    val currentItems = _state.value.items
+                    val combinedItems = (currentItems + newItems).distinctBy { it.id }
+                    
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        items = _state.value.items + newItems,
+                        items = combinedItems,
                         nextCursor = newCursor,
                         endReached = newCursor == null // If no next cursor, we reached end
                     )
