@@ -21,14 +21,70 @@ class FeedViewModel @Inject constructor(
         val nextCursor: String? = null,
         val isLoading: Boolean = false,
         val endReached: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
+        val hasNewPosts: Boolean = false
     )
 
     private val _state = MutableStateFlow(FeedState())
     val state: StateFlow<FeedState> = _state.asStateFlow()
 
+    private val pendingPosts = mutableListOf<Post>()
+
     init {
         loadPosts()
+        startPolling()
+    }
+
+    private fun startPolling() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30_000) // 30 seconds
+                checkForNewPosts()
+            }
+        }
+    }
+
+    private suspend fun checkForNewPosts() {
+        if (_state.value.isLoading) return // Skip if already loading main feed
+
+        try {
+            // Fetch first page (cursor = null)
+            val result = getPostsUseCase(1, null)
+            val fetchedItems = result.items
+            
+            val currentIds = _state.value.items.map { it.id }.toSet()
+            val pendingIds = pendingPosts.map { it.id }.toSet()
+            
+            val newUniqueItems = fetchedItems.filter { 
+                it.id !in currentIds && it.id !in pendingIds 
+            }
+
+            if (newUniqueItems.isNotEmpty()) {
+                pendingPosts.addAll(0, newUniqueItems) // Add to top of pending
+                _state.value = _state.value.copy(hasNewPosts = true)
+            }
+        } catch (e: Exception) {
+            // Silent failure for polling
+        }
+    }
+
+    fun showNewPosts() {
+        val currentItems = _state.value.items
+        // pendingPosts are already separate from currentItems. 
+        // We put pending at top.
+        // pendingPosts might have duplicates within itself if multiple polls happened?
+        // My logic `it.id !in pendingIds` prevents that.
+        // But `addAll(0, newUniqueItems)` puts newest poll results at TOP of pending.
+        // So pending is ordered: [Newest Poll Items, Older Poll Items, ..., Oldest Poll Items]
+        // This is correct order for feed.
+        
+        val newItemsList = pendingPosts + currentItems
+        
+        _state.value = _state.value.copy(
+            items = newItemsList,
+            hasNewPosts = false
+        )
+        pendingPosts.clear()
     }
 
     fun loadPosts() {
@@ -38,41 +94,8 @@ class FeedViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val currentCursor = _state.value.nextCursor
-                // For first page, cursor is null. 
-                // Wait, if it's first page, we just pass null.
-                // But for next pages, we pass nextCursor.
-                // Issue: Initial state nextCursor is null. 
-                // loadPosts() uses nextCursor. 
-                // If I want to load first page, cursor is null.
-                // If I want to load next page, cursor is what we got from previous.
-                // How to distinguish "Start" vs "Next" if both are null?
-                // Actually, for first load, items are empty.
-                // Or we can use a separate flag or just rely on items.isEmpty() logic if needed.
-                // But simpler: just pass the cursor we have.
-                // However, infinite scroll usually needs to know if we are "refreshing" (cursor=null) or "appending".
-                // In this simple cursor model: 
-                // - Initial load: cursor = null.
-                // - Response: nextCursor = "abc".
-                // - Next load: cursor = "abc".
-                // - Response: nextCursor = "def".
-                // - ...
-                // - Response: nextCursor = null (end).
                 
-                // Existing `currentPage` was used. Now strictly cursor.
-                // But `getPostsUseCase` needs `page` AND `cursor`?
-                // My update to `getPosts` was `getPosts(page: Int, cursor: String?)`.
-                // Existing logic had `currentPage`.
-                // If migrating to purely cursor, `page` might be irrelevant or legacy.
-                // The API signature I updated still takes `page`.
-                //     suspend fun getPosts(@Query("page") page: Int, @Query("cursor") cursor: String? = null)
-                // If the backend ignores page when cursor is present, fine. 
-                // Or maybe I should just pass 1 or dummy if using cursor.
-                // Use a counter for page just in case.
-                
-                // Wait, if `nextCursor` is null and items is NOT empty, it means we reached end?
-                // `endReached` logic handles that.
-                
-                val result = getPostsUseCase(1, currentCursor) // Passing 1 as page placeholder?
+                val result = getPostsUseCase(1, currentCursor) 
                 
                 val newItems = result.items
                 val newCursor = result.nextCursor
@@ -90,7 +113,7 @@ class FeedViewModel @Inject constructor(
                         isLoading = false,
                         items = combinedItems,
                         nextCursor = newCursor,
-                        endReached = newCursor == null // If no next cursor, we reached end
+                        endReached = newCursor == null
                     )
                 }
             } catch (e: Exception) {
@@ -103,7 +126,8 @@ class FeedViewModel @Inject constructor(
     }
 
     fun refresh() {
-        _state.value = FeedState(isLoading = true) // Reset state
+        _state.value = FeedState(isLoading = true) 
+        pendingPosts.clear() // Clear pending on manual refresh
         viewModelScope.launch {
             try {
                 val result = getPostsUseCase(1, null)
@@ -111,7 +135,8 @@ class FeedViewModel @Inject constructor(
                     isLoading = false,
                     items = result.items,
                     nextCursor = result.nextCursor,
-                    endReached = result.nextCursor == null
+                    endReached = result.nextCursor == null,
+                    hasNewPosts = false
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
