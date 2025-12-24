@@ -1,4 +1,4 @@
-package com.example.instagramclone.domain.usecase
+package com.example.instagramclone.domain.usecase.post
 
 import android.net.Uri
 import com.example.instagramclone.domain.model.Post

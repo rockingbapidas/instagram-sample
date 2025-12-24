@@ -1,14 +1,16 @@
 package com.example.instagramclone.data.remote.api
 
 import android.net.Uri
-import com.example.instagramclone.data.remote.dto.PostDto
 import com.example.instagramclone.data.remote.dto.CommentDto
-import com.example.instagramclone.domain.model.Profile
+import com.example.instagramclone.data.remote.dto.PostDto
 import retrofit2.http.*
 
-interface InstagramApi {
+interface PostApi {
     @GET("posts")
     suspend fun getPosts(@Query("page") page: Int): List<PostDto>
+
+    @GET("profile/posts")
+    suspend fun getUserPosts(): List<PostDto>
 
     @GET("posts/{id}")
     suspend fun getPost(@Path("id") id: String): PostDto
@@ -25,15 +27,9 @@ interface InstagramApi {
     @DELETE("posts/{id}/like")
     suspend fun unlikePost(@Path("id") id: String)
 
-    @GET("profile")
-    suspend fun getProfile(): Profile
-
-    @GET("profile/posts")
-    suspend fun getUserPosts(): List<PostDto>
-
     @GET("search")
     suspend fun searchPosts(@Query("query") query: String): List<PostDto>
 
     @GET("posts/{id}/comments")
     suspend fun getComments(@Path("id") id: String): List<CommentDto>
-} 
+}

@@ -33,7 +33,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(profile.username) },
+                title = { Text(profile?.username ?: "Profile") },
                 actions = {
                     IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -42,92 +42,105 @@ fun ProfileScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Profile Header
-            Row(
+        if (profile == null) {
+            // Show loading state
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
             ) {
-                // Profile Picture
-                Box(
+                CircularProgressIndicator()
+            }
+        } else {
+            val currentProfile = profile!!
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Profile Header
+                Row(
                     modifier = Modifier
-                        .size(80.dp)
-                        .padding(4.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(profile.profilePictureUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Profile picture",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        loading = {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
+                    // Profile Picture
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .padding(4.dp)
+                    ) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(currentProfile.profilePictureUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Profile picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
-                        }
+                        )
+                    }
+                    
+                    // Stats
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatItem(count = posts.size.toString(), label = "Posts")
+                        StatItem(count = currentProfile.followers.toString(), label = "Followers")
+                        StatItem(count = currentProfile.following.toString(), label = "Following")
+                    }
+                }
+                
+                // Bio
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = currentProfile.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = currentProfile.bio,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 
-                // Stats
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Edit Profile Button
+                OutlinedButton(
+                    onClick = { viewModel.editProfile() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 ) {
-                    StatItem(count = posts.size.toString(), label = "Posts")
-                    StatItem(count = profile.followers.toString(), label = "Followers")
-                    StatItem(count = profile.following.toString(), label = "Following")
+                    Text("Edit Profile")
                 }
-            }
-            
-            // Bio
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Text(
-                    text = profile.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = profile.bio,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Edit Profile Button
-            OutlinedButton(
-                onClick = { viewModel.editProfile() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Edit Profile")
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Posts Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(1.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(posts) { post ->
-                    PostGridItem(post = post)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Posts Grid
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    contentPadding = PaddingValues(1.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(posts) { post ->
+                        PostGridItem(post = post)
+                    }
                 }
             }
         }
@@ -137,7 +150,22 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showMenu = false },
             title = { Text("Profile Options") },
-            text = { Text("What would you like to do?") },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            viewModel.logout()
+                            showMenu = false
+                            navController.navigate("login") {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Logout", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = { showMenu = false }) {
                     Text("Close")
@@ -189,4 +217,4 @@ private fun PostGridItem(post: Post) {
             }
         )
     }
-} 
+}

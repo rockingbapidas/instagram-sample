@@ -1,4 +1,4 @@
-package com.example.instagramclone.domain.usecase
+package com.example.instagramclone.domain.usecase.post
 
 import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.repository.PostRepository

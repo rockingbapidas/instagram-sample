@@ -3,7 +3,7 @@ package com.example.instagramclone.presentation.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.instagramclone.domain.model.Post
-import com.example.instagramclone.domain.usecase.SearchPostsUseCase
+import com.example.instagramclone.domain.usecase.post.SearchPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

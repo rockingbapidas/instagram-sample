@@ -3,7 +3,7 @@ package com.example.instagramclone.presentation.screens.create
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.instagramclone.domain.usecase.CreatePostUseCase
+import com.example.instagramclone.domain.usecase.post.CreatePostUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

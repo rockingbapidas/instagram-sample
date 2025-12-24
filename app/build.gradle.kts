@@ -84,6 +84,9 @@ dependencies {
     // Coil for image loading
     implementation(libs.coil.compose)
 
+    // Security
+    implementation(libs.androidx.security.crypto)
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging.ktx)

@@ -15,4 +15,6 @@ data class Comment(
     val username: String,
     val text: String,
     val timestamp: Long
-) 
+)
+
+const val PREFETCH_THRESHOLD = 3

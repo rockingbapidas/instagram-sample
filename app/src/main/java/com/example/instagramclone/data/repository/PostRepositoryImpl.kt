@@ -6,39 +6,36 @@ import com.example.instagramclone.data.local.dao.PostDao
 import com.example.instagramclone.data.mapper.PostMapper
 import com.example.instagramclone.data.mapper.toDomain
 import com.example.instagramclone.data.mapper.toEntity
-import com.example.instagramclone.data.remote.api.InstagramApi
+import com.example.instagramclone.data.remote.api.PostApi
 import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.model.Comment
-import com.example.instagramclone.domain.model.Profile
 import com.example.instagramclone.domain.repository.PostRepository
 import javax.inject.Inject
 
 class PostRepositoryImpl @Inject constructor(
-    private val api: InstagramApi,
-    private val db: AppDatabase,
-    private val postDao: PostDao,
-    private val postMapper: PostMapper
+    private val api: PostApi,
+    private val db: AppDatabase
 ) : PostRepository {
     override suspend fun getPosts(page: Int): List<Post> {
         val remotePosts = api.getPosts(page)
-        db.postDao().insertPosts(remotePosts.map { postMapper.toEntity(it) })
+        db.postDao().insertPosts(remotePosts.map { PostMapper.toEntity(it) })
         return db.postDao().getAllPosts().map { postEntity ->
             val comments = db.commentDao().getCommentsForPost(postEntity.id).map { it.toDomain() }
-            postMapper.toDomain(postEntity, comments)
+            PostMapper.toDomain(postEntity, comments)
         }
     }
 
     override suspend fun getPost(id: String): Post {
         val postEntity = db.postDao().getPostById(id)
         val comments = db.commentDao().getCommentsForPost(id).map { it.toDomain() }
-        return postMapper.toDomain(postEntity, comments)
+        return PostMapper.toDomain(postEntity, comments)
     }
 
     override suspend fun createPost(imageUri: Uri, caption: String): Post {
         val postDto = api.createPost(imageUri, caption)
-        val postEntity = postMapper.toEntity(postDto)
+        val postEntity = PostMapper.toEntity(postDto)
         db.postDao().insertPosts(listOf(postEntity))
-        return postMapper.toDomain(postEntity, emptyList())
+        return PostMapper.toDomain(postEntity, emptyList())
     }
 
     override suspend fun likePost(postId: String) {
@@ -52,16 +49,16 @@ class PostRepositoryImpl @Inject constructor(
     override suspend fun getUserPosts(): List<Post> {
         return db.postDao().getAllPosts().map { postEntity ->
             val comments = db.commentDao().getCommentsForPost(postEntity.id).map { it.toDomain() }
-            postMapper.toDomain(postEntity, comments)
+            PostMapper.toDomain(postEntity, comments)
         }
     }
 
     override suspend fun searchPosts(query: String): List<Post> {
         val remotePosts = api.searchPosts(query)
-        db.postDao().insertPosts(remotePosts.map { postMapper.toEntity(it) })
+        db.postDao().insertPosts(remotePosts.map { PostMapper.toEntity(it) })
         return db.postDao().getAllPosts().map { postEntity ->
             val comments = db.commentDao().getCommentsForPost(postEntity.id).map { it.toDomain() }
-            postMapper.toDomain(postEntity, comments)
+            PostMapper.toDomain(postEntity, comments)
         }
     }
 
@@ -70,4 +67,4 @@ class PostRepositoryImpl @Inject constructor(
         db.commentDao().insertComments(remoteComments.map { it.toEntity() })
         return db.commentDao().getCommentsForPost(postId).map { it.toDomain() }
     }
-} 
+}

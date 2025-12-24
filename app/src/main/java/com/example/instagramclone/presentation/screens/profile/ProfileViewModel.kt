@@ -3,9 +3,10 @@ package com.example.instagramclone.presentation.screens.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.instagramclone.domain.model.Post
-import com.example.instagramclone.domain.model.Profile
-import com.example.instagramclone.domain.usecase.GetProfileUseCase
-import com.example.instagramclone.domain.usecase.GetUserPostsUseCase
+import com.example.instagramclone.domain.model.User
+import com.example.instagramclone.domain.usecase.auth.GetCurrentUserUseCase
+import com.example.instagramclone.domain.usecase.post.GetUserPostsUseCase
+import com.example.instagramclone.domain.usecase.auth.LogoutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,21 +16,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val getProfileUseCase: GetProfileUseCase,
-    private val getUserPostsUseCase: GetUserPostsUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getUserPostsUseCase: GetUserPostsUseCase,
+    private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
 
-    private val _profile = MutableStateFlow(
-        Profile(
-            username = "username",
-            displayName = "Display Name",
-            bio = "Bio goes here",
-            profilePictureUrl = "https://example.com/profile.jpg",
-            followers = 0,
-            following = 0
-        )
-    )
-    val profile: StateFlow<Profile> = _profile.asStateFlow()
+    private val _profile = MutableStateFlow<User?>(null)
+    val profile: StateFlow<User?> = _profile.asStateFlow()
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts.asStateFlow()
@@ -41,11 +34,8 @@ class ProfileViewModel @Inject constructor(
 
     private fun loadProfile() {
         viewModelScope.launch {
-            try {
-                val profileData = getProfileUseCase()
-                _profile.value = profileData
-            } catch (e: Exception) {
-                // Handle error
+            getCurrentUserUseCase().collect { user ->
+                _profile.value = user
             }
         }
     }
@@ -63,5 +53,15 @@ class ProfileViewModel @Inject constructor(
 
     fun editProfile() {
         // TODO: Implement edit profile navigation
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            try {
+                logoutUseCase()
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
     }
 }

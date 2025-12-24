@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
             intent?.getStringExtra("navigateTo") == "notifications" -> {
                 Screen.Notifications.route
             }
-            else -> Screen.Feed.route
+            else -> Screen.Splash.route
         }
     }
 }

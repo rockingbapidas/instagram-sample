@@ -2,9 +2,10 @@ package com.example.instagramclone.di
 
 import com.example.instagramclone.data.local.AppDatabase
 import com.example.instagramclone.data.mapper.PostMapper
-import com.example.instagramclone.data.remote.api.InstagramApi
+import com.example.instagramclone.data.remote.api.PostApi
 import com.example.instagramclone.data.repository.PostRepositoryImpl
 import com.example.instagramclone.domain.repository.PostRepository
+import com.example.instagramclone.domain.usecase.post.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,18 +17,26 @@ import javax.inject.Singleton
 object PostModule {
     @Provides
     @Singleton
-    fun providePostMapper(): PostMapper = PostMapper
-
-    @Provides
-    @Singleton
     fun providePostRepository(
-        api: InstagramApi,
-        db: AppDatabase,
-        postMapper: PostMapper
+        api: PostApi,
+        db: AppDatabase
     ): PostRepository = PostRepositoryImpl(
         api = api,
-        db = db,
-        postDao = db.postDao(),
-        postMapper = postMapper
+        db = db
     )
+
+    @Provides
+    fun provideGetPostsUseCase(postRepository: PostRepository) = GetPostsUseCase(postRepository)
+
+    @Provides
+    fun provideGetUserPostsUseCase(postRepository: PostRepository) = GetUserPostsUseCase(postRepository)
+
+    @Provides
+    fun provideCreatePostUseCase(postRepository: PostRepository) = CreatePostUseCase(postRepository)
+
+    @Provides
+    fun provideLikePostUseCase(postRepository: PostRepository) = LikePostUseCase(postRepository)
+
+    @Provides
+    fun provideSearchPostsUseCase(postRepository: PostRepository) = SearchPostsUseCase(postRepository)
 }

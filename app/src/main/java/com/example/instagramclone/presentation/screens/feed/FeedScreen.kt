@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.instagramclone.domain.model.PREFETCH_THRESHOLD
 import com.example.instagramclone.domain.model.Post
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -52,13 +53,13 @@ fun FeedScreen(
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()
             .collect { lastIndex ->
-                if (lastIndex != null && lastIndex >= posts.size - 3) {
+                if (lastIndex != null && lastIndex >= posts.size - PREFETCH_THRESHOLD) {
                     viewModel.loadPosts()
                 }
             }
     }
 
-    // Show error snack bar
+    // Handle error on initial composition
     error?.let { errorMessage ->
         LaunchedEffect(errorMessage) {
             coroutineScope.launch {
@@ -67,6 +68,7 @@ fun FeedScreen(
         }
     }
 
+    // Load posts on initial composition
     LaunchedEffect(Unit) {
         viewModel.loadPosts()
     }

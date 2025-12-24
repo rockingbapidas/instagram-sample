@@ -22,12 +22,23 @@ import com.example.instagramclone.presentation.navigation.NavGraph
 import com.example.instagramclone.presentation.navigation.Screen
 
 @Composable
-fun InstagramApp(startDestination: String = Screen.Feed.route) {
+fun InstagramApp(startDestination: String = Screen.Splash.route) {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    
+    // Hide bottom bar on auth screens
+    val showBottomBar = currentRoute !in listOf(
+        Screen.Splash.route,
+        Screen.Login.route,
+        Screen.Register.route
+    )
     
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(navController)
+            if (showBottomBar) {
+                BottomNavigationBar(navController)
+            }
         }
     ) { paddingValues ->
         NavGraph(
@@ -62,6 +73,7 @@ private fun BottomNavigationBar(navController: NavController) {
                             Screen.CreatePost -> Icons.Default.Add
                             Screen.Notifications -> Icons.Default.Notifications
                             Screen.Profile -> Icons.Default.Person
+                            Screen.Splash, Screen.Login, Screen.Register -> Icons.Default.Home // Not used in bottom bar
                         },
                         contentDescription = screen.route
                     )
