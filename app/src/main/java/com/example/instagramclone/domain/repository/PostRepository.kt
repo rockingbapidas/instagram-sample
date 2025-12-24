@@ -3,9 +3,10 @@ package com.example.instagramclone.domain.repository
 import android.net.Uri
 import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.model.Comment
+import com.example.instagramclone.domain.model.FeedPage
 
 interface PostRepository {
-    suspend fun getPosts(page: Int): List<Post>
+    suspend fun getPosts(page: Int, cursor: String? = null): FeedPage
     suspend fun getPost(id: String): Post
     suspend fun createPost(imageUri: Uri, caption: String): Post
     suspend fun likePost(postId: String)

@@ -41,9 +41,7 @@ fun FeedScreen(
     navController: NavController,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
-    val posts by viewModel.posts.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val state by viewModel.state.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -53,24 +51,19 @@ fun FeedScreen(
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()
             .collect { lastIndex ->
-                if (lastIndex != null && lastIndex >= posts.size - PREFETCH_THRESHOLD) {
+                if (lastIndex != null && lastIndex >= state.items.size - PREFETCH_THRESHOLD) {
                     viewModel.loadPosts()
                 }
             }
     }
 
     // Handle error on initial composition
-    error?.let { errorMessage ->
+    state.error?.let { errorMessage ->
         LaunchedEffect(errorMessage) {
             coroutineScope.launch {
                 viewModel.clearError()
             }
         }
-    }
-
-    // Load posts on initial composition
-    LaunchedEffect(Unit) {
-        viewModel.loadPosts()
     }
 
     Scaffold(
@@ -86,14 +79,14 @@ fun FeedScreen(
         }
     ) { paddingValues ->
         PullToRefreshBox(
-            isRefreshing = isLoading,
+            isRefreshing = state.isLoading,
             onRefresh = { viewModel.refresh() },
             state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (isLoading && posts.isEmpty()) {
+            if (state.isLoading && state.items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -103,10 +96,10 @@ fun FeedScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(posts) { post ->
+                    items(state.items) { post ->
                         PostItem(post = post)
                     }
-                    if (isLoading) {
+                    if (state.isLoading && state.items.isNotEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -123,7 +116,7 @@ fun FeedScreen(
         }
 
         // Error Snackbar
-        error?.let { errorMessage ->
+        state.error?.let { errorMessage ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()

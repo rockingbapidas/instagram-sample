@@ -3,11 +3,15 @@ package com.example.instagramclone.data.remote.api
 import android.net.Uri
 import com.example.instagramclone.data.remote.dto.CommentDto
 import com.example.instagramclone.data.remote.dto.PostDto
+import com.example.instagramclone.data.remote.dto.FeedResponseDto
 import retrofit2.http.*
 
 interface PostApi {
     @GET("posts")
-    suspend fun getPosts(@Query("page") page: Int): List<PostDto>
+    suspend fun getPosts(
+        @Query("page") page: Int,
+        @Query("cursor") cursor: String? = null
+    ): FeedResponseDto
 
     @GET("profile/posts")
     suspend fun getUserPosts(): List<PostDto>
