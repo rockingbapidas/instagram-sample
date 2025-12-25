@@ -31,6 +31,8 @@ import androidx.navigation.NavController
 import androidx.paging.LoadState
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.instagramclone.domain.model.FeedItem
+import com.example.instagramclone.domain.model.Ad
 import com.example.instagramclone.domain.model.Post
 import kotlinx.coroutines.launch
 
@@ -81,9 +83,12 @@ fun FeedScreen(
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         items(pagingItems.itemCount) { index ->
-                            val post = pagingItems[index]
-                            if (post != null) {
-                                PostItem(post = post)
+                            val item = pagingItems[index]
+                            if (item != null) {
+                                when (item) {
+                                    is FeedItem.PostItem -> PostItem(post = item.post)
+                                    is FeedItem.AdItem -> AdItem(ad = item.ad)
+                                }
                             }
                         }
 
@@ -333,6 +338,43 @@ fun PostItem(post: Post) {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun AdItem(ad: Ad) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("SPONSORED", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(ad.imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Ad Image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(ad.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(ad.content, style = MaterialTheme.typography.bodyMedium)
+            Button(onClick = { /* Open Ad */ }, modifier = Modifier.padding(top = 8.dp)) {
+                Text("Learn More")
+            }
+        }
     }
 }
 
