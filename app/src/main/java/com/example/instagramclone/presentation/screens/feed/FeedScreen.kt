@@ -100,8 +100,8 @@ fun FeedScreen(
                         items(state.items) { post ->
                             PostItem(post = post)
                         }
-                        if (state.isLoading && state.items.isNotEmpty()) {
-                            item {
+                        item {
+                            if (state.isLoading && state.items.isNotEmpty()) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -109,6 +109,23 @@ fun FeedScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator()
+                                }
+                            } else if (state.error != null && state.items.isNotEmpty()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "Failed to load more posts",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedButton(onClick = { viewModel.loadPosts() }) {
+                                        Text("Retry")
+                                    }
                                 }
                             }
                         }
@@ -118,7 +135,7 @@ fun FeedScreen(
                 if (state.hasNewPosts) {
                     ExtendedFloatingActionButton(
                         text = { Text("New Posts") },
-                        icon = { Icon(Icons.Default.Add, contentDescription = null) }, // Using Add icon as placeholder or maybe Refresh
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) }, 
                         onClick = {
                             viewModel.showNewPosts()
                             coroutineScope.launch {
@@ -135,8 +152,8 @@ fun FeedScreen(
             }
         }
 
-        // Error Snackbar
-        state.error?.let { errorMessage ->
+        // Error Snackbar (Only for initial load)
+        if (state.error != null && state.items.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -146,7 +163,7 @@ fun FeedScreen(
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
                 ) {
-                    Text(errorMessage)
+                    Text(state.error!!)
                 }
             }
         }
