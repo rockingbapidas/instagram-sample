@@ -10,4 +10,8 @@ class GetPostsUseCase @Inject constructor(
     suspend operator fun invoke(page: Int, cursor: String? = null): FeedPage {
         return repository.getPosts(page, cursor)
     }
+
+    suspend fun getCached(): FeedPage {
+        return repository.getCachedPosts()
+    }
 }

@@ -1,6 +1,7 @@
 package com.example.instagramclone.di
 
 import com.example.instagramclone.data.local.AppDatabase
+import com.example.instagramclone.data.local.preferences.FeedPreferences
 import com.example.instagramclone.data.mapper.PostMapper
 import com.example.instagramclone.data.remote.api.PostApi
 import com.example.instagramclone.data.repository.PostRepositoryImpl
@@ -19,10 +20,12 @@ object PostModule {
     @Singleton
     fun providePostRepository(
         api: PostApi,
-        db: AppDatabase
+        db: AppDatabase,
+        feedPreferences: FeedPreferences
     ): PostRepository = PostRepositoryImpl(
         api = api,
-        db = db
+        db = db,
+        feedPreferences = feedPreferences
     )
 
     @Provides

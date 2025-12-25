@@ -6,6 +6,7 @@ import com.example.instagramclone.domain.model.Comment
 import com.example.instagramclone.domain.model.FeedPage
 
 interface PostRepository {
+    suspend fun getCachedPosts(): FeedPage
     suspend fun getPosts(page: Int, cursor: String? = null): FeedPage
     suspend fun getPost(id: String): Post
     suspend fun createPost(imageUri: Uri, caption: String): Post

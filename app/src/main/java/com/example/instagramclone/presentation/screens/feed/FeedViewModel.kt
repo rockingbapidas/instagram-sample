@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.usecase.post.GetPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,14 +32,35 @@ class FeedViewModel @Inject constructor(
     private val pendingPosts = mutableListOf<Post>()
 
     init {
-        loadPosts()
+        loadCachedPosts()
         startPolling()
+    }
+    
+    private fun loadCachedPosts() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            try {
+                val cached = getPostsUseCase.getCached()
+                if (cached.items.isNotEmpty()) {
+                     _state.value = _state.value.copy(
+                         isLoading = false,
+                         items = cached.items,
+                         nextCursor = cached.nextCursor,
+                         endReached = cached.nextCursor == null
+                     )
+                } else {
+                    loadPosts() // Fallback to network
+                }
+            } catch (e: Exception) {
+                loadPosts() // Fallback on error
+            }
+        }
     }
 
     private fun startPolling() {
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(30_000) // 30 seconds
+                delay(30_000) // 30 seconds
                 checkForNewPosts()
             }
         }
@@ -70,14 +92,7 @@ class FeedViewModel @Inject constructor(
 
     fun showNewPosts() {
         val currentItems = _state.value.items
-        // pendingPosts are already separate from currentItems. 
-        // We put pending at top.
-        // pendingPosts might have duplicates within itself if multiple polls happened?
-        // My logic `it.id !in pendingIds` prevents that.
-        // But `addAll(0, newUniqueItems)` puts newest poll results at TOP of pending.
-        // So pending is ordered: [Newest Poll Items, Older Poll Items, ..., Oldest Poll Items]
-        // This is correct order for feed.
-        
+
         val newItemsList = pendingPosts + currentItems
         
         _state.value = _state.value.copy(
