@@ -1,52 +1,62 @@
 package com.example.instagramclone.data.repository
 
 import android.net.Uri
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
+import com.example.instagramclone.data.local.entities.PostWithComments
 import com.example.instagramclone.data.local.AppDatabase
-import com.example.instagramclone.data.local.dao.PostDao
 import com.example.instagramclone.data.mapper.PostMapper
 import com.example.instagramclone.data.mapper.toDomain
 import com.example.instagramclone.data.mapper.toEntity
 import com.example.instagramclone.data.remote.api.PostApi
-import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.model.Comment
-import com.example.instagramclone.domain.model.FeedPage
+import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.repository.PostRepository
-import com.example.instagramclone.data.local.preferences.FeedPreferences
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class PostRepositoryImpl @Inject constructor(
     private val api: PostApi,
-    private val db: AppDatabase,
-    private val feedPreferences: FeedPreferences
+    private val db: AppDatabase
 ) : PostRepository {
-    override suspend fun getCachedPosts(): FeedPage {
-        val entities = db.postDao().getAllPosts()
-        val posts = entities.map { postEntity ->
-            val comments = db.commentDao().getCommentsForPost(postEntity.id).map { it.toDomain() }
-            PostMapper.toDomain(postEntity, comments)
+
+    @OptIn(ExperimentalPagingApi::class)
+    override fun getPosts(): Flow<PagingData<Post>> {
+        return Pager(
+            config = PagingConfig(pageSize = 10),
+            remoteMediator = PostRemoteMediator(api, db),
+            pagingSourceFactory = { db.postDao().pagingSource() }
+        ).flow.map { pagingData ->
+            pagingData.map { postWithComments ->
+                PostMapper.toDomain(
+                    postWithComments.post,
+                    postWithComments.comments.map { it.toDomain() }
+                )
+            }
         }
-        val cursor = feedPreferences.getNextCursor()
-        return FeedPage(items = posts, nextCursor = cursor)
     }
 
-    override suspend fun getPosts(page: Int, cursor: String?): FeedPage {
-        val remoteResponse = api.getPosts(page, cursor)
-        db.postDao().insertPosts(remoteResponse.items.map { PostMapper.toEntity(it) })
-
-        feedPreferences.saveNextCursor(remoteResponse.nextCursor)
-        
-        val items = remoteResponse.items.map { dto ->
-            val entity = PostMapper.toEntity(dto)
-            // We just inserted/updated it, so we can use the entity data. 
-            // We also need comments.
-            val comments = db.commentDao().getCommentsForPost(entity.id).map { it.toDomain() }
-            PostMapper.toDomain(entity, comments)
+    override suspend fun getRecentPosts(): List<Post> {
+        val response = api.getPosts(1, null)
+        return response.items.map { dto ->
+             val entity = PostMapper.toEntity(dto)
+             PostMapper.toDomain(entity, emptyList())
         }
-        
-        return FeedPage(
-            items = items,
-            nextCursor = remoteResponse.nextCursor
-        )
+    }
+    
+    override suspend fun hasNewPosts(): Boolean {
+         val latestLocal = db.postDao().getLatestPost()
+         val remote = getRecentPosts()
+         if (remote.isNotEmpty()) {
+             // If local is empty, everything is new, but we might just be starting up.
+             // If we have items, check ID.
+             return latestLocal != null && remote.first().id != latestLocal.id
+         }
+         return false
     }
 
     override suspend fun getPost(id: String): Post {

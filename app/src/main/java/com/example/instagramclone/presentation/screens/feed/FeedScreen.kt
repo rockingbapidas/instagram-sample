@@ -4,8 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -28,11 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.paging.LoadState
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.instagramclone.domain.model.PREFETCH_THRESHOLD
 import com.example.instagramclone.domain.model.Post
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,30 +40,12 @@ fun FeedScreen(
     navController: NavController,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val pagingItems = viewModel.feedPagingFlow.collectAsLazyPagingItems()
+    val hasNewPosts by viewModel.hasNewPosts.collectAsState()
+    
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-
-    // Handle infinite scrolling
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .distinctUntilChanged()
-            .collect { lastIndex ->
-                if (lastIndex != null && lastIndex >= state.items.size - PREFETCH_THRESHOLD) {
-                    viewModel.loadPosts()
-                }
-            }
-    }
-
-    // Handle error on initial composition
-    state.error?.let { errorMessage ->
-        LaunchedEffect(errorMessage) {
-            coroutineScope.launch {
-                viewModel.clearError()
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -78,17 +59,19 @@ fun FeedScreen(
             )
         }
     ) { paddingValues ->
+        val isRefreshing = pagingItems.loadState.refresh is LoadState.Loading
+        
         PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = { viewModel.refresh() },
+            isRefreshing = isRefreshing,
+            onRefresh = { pagingItems.refresh() },
             state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                if (state.isLoading && state.items.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (isRefreshing && pagingItems.itemCount == 0) {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 } else {
@@ -97,11 +80,17 @@ fun FeedScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(state.items) { post ->
-                            PostItem(post = post)
+                        items(pagingItems.itemCount) { index ->
+                            val post = pagingItems[index]
+                            if (post != null) {
+                                PostItem(post = post)
+                            }
                         }
+
+                        // Append Loader or Error
                         item {
-                            if (state.isLoading && state.items.isNotEmpty()) {
+                            val appendState = pagingItems.loadState.append
+                            if (appendState is LoadState.Loading) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -110,7 +99,7 @@ fun FeedScreen(
                                 ) {
                                     CircularProgressIndicator()
                                 }
-                            } else if (state.error != null && state.items.isNotEmpty()) {
+                            } else if (appendState is LoadState.Error) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -123,7 +112,7 @@ fun FeedScreen(
                                         color = MaterialTheme.colorScheme.error
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    OutlinedButton(onClick = { viewModel.loadPosts() }) {
+                                    OutlinedButton(onClick = { pagingItems.retry() }) {
                                         Text("Retry")
                                     }
                                 }
@@ -131,13 +120,15 @@ fun FeedScreen(
                         }
                     }
                 }
-
-                if (state.hasNewPosts) {
-                    ExtendedFloatingActionButton(
+                
+                // New Posts Banner
+                if (hasNewPosts) {
+                     ExtendedFloatingActionButton(
                         text = { Text("New Posts") },
                         icon = { Icon(Icons.Default.Add, contentDescription = null) }, 
                         onClick = {
-                            viewModel.showNewPosts()
+                            viewModel.onNewPostsShown()
+                            pagingItems.refresh()
                             coroutineScope.launch {
                                 listState.animateScrollToItem(0)
                             }
@@ -151,19 +142,24 @@ fun FeedScreen(
                 }
             }
         }
-
-        // Error Snackbar (Only for initial load)
-        if (state.error != null && state.items.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
+        
+        // Initial Refresh Error Snackbar
+        val refreshState = pagingItems.loadState.refresh
+        if (refreshState is LoadState.Error && pagingItems.itemCount == 0) {
+             Box(
+                modifier = Modifier.fillMaxSize()
             ) {
                 Snackbar(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    action = {
+                        TextButton(onClick = { pagingItems.retry() }) {
+                            Text("Retry")
+                        }
+                    }
                 ) {
-                    Text(state.error!!)
+                    Text(refreshState.error.message ?: "Unknown Error")
                 }
             }
         }
@@ -274,7 +270,7 @@ fun PostItem(post: Post) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = { isLiked = !isLiked }) {
                     Icon(
@@ -339,3 +335,5 @@ fun PostItem(post: Post) {
         )
     }
 }
+
+

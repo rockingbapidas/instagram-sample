@@ -11,6 +11,8 @@ import com.example.instagramclone.data.local.entities.PostEntity
 import com.example.instagramclone.data.local.entities.CommentEntity
 import com.example.instagramclone.data.local.entities.NotificationEntity
 import com.example.instagramclone.data.local.entities.UserEntity
+import com.example.instagramclone.data.local.entities.RemoteKeysEntity
+import com.example.instagramclone.data.local.dao.RemoteKeysDao
 import com.example.instagramclone.data.local.converters.NotificationTypeConverter
 
 @Database(
@@ -18,9 +20,10 @@ import com.example.instagramclone.data.local.converters.NotificationTypeConverte
         UserEntity::class,
         PostEntity::class,
         CommentEntity::class,
-        NotificationEntity::class
+        NotificationEntity::class,
+        RemoteKeysEntity::class
     ],
-    version = 4
+    version = 5
 )
 @TypeConverters(NotificationTypeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -28,4 +31,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun commentDao(): CommentDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun remoteKeysDao(): RemoteKeysDao
 } 

@@ -1,13 +1,15 @@
 package com.example.instagramclone.domain.repository
 
 import android.net.Uri
-import com.example.instagramclone.domain.model.Post
+import androidx.paging.PagingData
 import com.example.instagramclone.domain.model.Comment
-import com.example.instagramclone.domain.model.FeedPage
+import com.example.instagramclone.domain.model.Post
+import kotlinx.coroutines.flow.Flow
 
 interface PostRepository {
-    suspend fun getCachedPosts(): FeedPage
-    suspend fun getPosts(page: Int, cursor: String? = null): FeedPage
+    fun getPosts(): Flow<PagingData<Post>>
+    suspend fun getRecentPosts(): List<Post>
+    suspend fun hasNewPosts(): Boolean
     suspend fun getPost(id: String): Post
     suspend fun createPost(imageUri: Uri, caption: String): Post
     suspend fun likePost(postId: String)
