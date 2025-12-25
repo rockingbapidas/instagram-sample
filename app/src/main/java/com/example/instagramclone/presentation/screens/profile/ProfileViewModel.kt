@@ -28,25 +28,43 @@ class ProfileViewModel @Inject constructor(
     val posts: StateFlow<List<Post>> = _posts.asStateFlow()
 
     init {
-        loadProfile()
-        loadPosts()
+        syncData()
     }
 
-    private fun loadProfile() {
+    private fun syncData() {
+        // Observe Profile
         viewModelScope.launch {
-            getCurrentUserUseCase().collect { user ->
-                _profile.value = user
+             getCurrentUserUseCase().collect { user ->
+                 _profile.value = user
+                 if (user != null) {
+                     // Refresh posts when user is loaded
+                     try {
+                         getUserPostsUseCase.refresh(user.id)
+                     } catch (e: Exception) {
+                         // Ignore refresh error
+                     }
+                 }
+             }
+        }
+
+        // Observe Posts (Reactive to Profile changes)
+        viewModelScope.launch {
+            // Using collectLatest to switch to new user's posts if profile changes
+            _profile.collect { user ->
+                if (user != null) {
+                    getUserPostsUseCase(user.id).collect { userPosts ->
+                         _posts.value = userPosts
+                    }
+                }
             }
         }
-    }
 
-    private fun loadPosts() {
+        // Trigger initial Profile refresh
         viewModelScope.launch {
             try {
-                val userPosts = getUserPostsUseCase()
-                _posts.value = userPosts
+                getCurrentUserUseCase.refresh()
             } catch (e: Exception) {
-                // Handle error
+                // Ignore refresh error
             }
         }
     }

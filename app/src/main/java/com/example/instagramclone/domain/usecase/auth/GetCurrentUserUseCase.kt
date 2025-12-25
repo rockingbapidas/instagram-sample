@@ -11,4 +11,8 @@ class GetCurrentUserUseCase @Inject constructor(
     operator fun invoke(): Flow<User?> {
         return authRepository.getCurrentUser()
     }
+
+    suspend fun refresh() {
+        authRepository.refreshCurrentUser()
+    }
 }

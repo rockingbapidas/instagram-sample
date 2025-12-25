@@ -4,6 +4,7 @@ import androidx.paging.PagingSource
 import androidx.room.*
 import com.example.instagramclone.data.local.entities.PostEntity
 import com.example.instagramclone.data.local.entities.PostWithComments
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PostDao {
@@ -22,6 +23,9 @@ interface PostDao {
 
     @Query("DELETE FROM posts")
     suspend fun deleteAllPosts()
+
+    @Query("SELECT * FROM posts WHERE userId = :userId ORDER BY timestamp DESC")
+    fun getPostsByUserId(userId: String): Flow<List<PostWithComments>>
 
     @Query("SELECT * FROM posts ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestPost(): PostEntity?

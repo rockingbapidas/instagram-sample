@@ -23,7 +23,7 @@ import com.example.instagramclone.data.local.converters.NotificationTypeConverte
         NotificationEntity::class,
         RemoteKeysEntity::class
     ],
-    version = 5
+    version = 6
 )
 @TypeConverters(NotificationTypeConverter::class)
 abstract class AppDatabase : RoomDatabase() {

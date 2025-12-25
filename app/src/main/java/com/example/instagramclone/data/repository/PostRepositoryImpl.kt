@@ -80,10 +80,25 @@ class PostRepositoryImpl @Inject constructor(
         api.unlikePost(postId)
     }
 
-    override suspend fun getUserPosts(): List<Post> {
-        return db.postDao().getAllPosts().map { postEntity ->
-            val comments = db.commentDao().getCommentsForPost(postEntity.id).map { it.toDomain() }
-            PostMapper.toDomain(postEntity, comments)
+    override fun getUserPosts(userId: String): Flow<List<Post>> {
+        return db.postDao().getPostsByUserId(userId).map { list ->
+            list.map { postWithComments ->
+                PostMapper.toDomain(
+                    postWithComments.post,
+                    postWithComments.comments.map { it.toDomain() }
+                )
+            }
+        }
+    }
+
+    override suspend fun refreshUserPosts(userId: String) {
+        try {
+            // Assuming the API returns posts for the authenticated user (via token)
+            // If we needed posts for *any* user, the API would need a userId param.
+            val remotePosts = api.getUserPosts()
+            db.postDao().insertPosts(remotePosts.map { PostMapper.toEntity(it).copy(userId = userId) })
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

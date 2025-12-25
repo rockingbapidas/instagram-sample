@@ -77,6 +77,16 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun refreshCurrentUser() {
+        try {
+            val userDto = api.getCurrentUser()
+            val userEntity = UserMapper.toEntity(userDto)
+            userDao.insertUser(userEntity)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun getCurrentUser(): Flow<User?> {
         return userDao.getCurrentUser().map { userEntity ->
             userEntity?.let { UserMapper.toDomain(it) }

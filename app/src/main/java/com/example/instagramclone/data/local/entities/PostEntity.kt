@@ -10,5 +10,6 @@ data class PostEntity(
     val imageUrl: String,
     val caption: String,
     val likes: Int,
+    val userId: String?,
     val timestamp: Long
 ) 
