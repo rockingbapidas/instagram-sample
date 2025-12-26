@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlinCompose)
     id("kotlin-kapt")
     alias(libs.plugins.hiltAndroid)
+    alias(libs.plugins.googleGmsGoogleServices)
+    alias(libs.plugins.googleFirebaseCrashlytics)
 }
 
 android {
@@ -67,6 +69,7 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt.android)
+    implementation(libs.firebase.crashlytics)
     kapt(libs.hilt.android.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 

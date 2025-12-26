@@ -44,19 +44,22 @@ class NotificationManager @Inject constructor(
         val handler = handlerRegistry.getHandler(notification.type)
 
         val intent = handler?.getHandleIntent(context, notification) ?: Intent(
-            context,
-            MainActivity::class.java
+            /* packageContext = */ context,
+            /* cls = */ MainActivity::class.java
         ).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        intent.apply {
             putExtra("notificationId", notification.id)
             putExtra("notificationType", notification.type.name)
         }
 
         val pendingIntent = PendingIntent.getActivity(
-            context,
-            notification.id.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            /* context = */ context,
+            /* requestCode = */ notification.id.hashCode(),
+            /* intent = */ intent,
+            /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val title = handler?.getDefaultTitle(notification) ?: notification.title
