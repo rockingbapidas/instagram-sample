@@ -13,8 +13,12 @@ interface PostApi {
         @Query("cursor") cursor: String? = null
     ): FeedResponseDto
 
-    @GET("profile/posts")
-    suspend fun getUserPosts(): List<PostDto>
+    @GET("users/{userId}/posts")
+    suspend fun getUserPosts(
+        @Path("userId") userId: String,
+        @Query("page") page: Int,
+        @Query("cursor") cursor: String? = null
+    ): FeedResponseDto
 
     @GET("posts/{id}")
     suspend fun getPost(@Path("id") id: String): PostDto

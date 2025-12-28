@@ -1,42 +1,64 @@
 package com.example.instagramclone.presentation.screens.feed
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.instagramclone.domain.model.FeedItem
 import com.example.instagramclone.domain.model.Ad
+import com.example.instagramclone.domain.model.FeedItem
 import com.example.instagramclone.domain.model.Post
+import com.example.instagramclone.presentation.screens.component.PostItem
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     navController: NavController,
@@ -44,17 +66,47 @@ fun FeedScreen(
 ) {
     val pagingItems = viewModel.feedPagingFlow.collectAsLazyPagingItems()
     val hasNewPosts by viewModel.hasNewPosts.collectAsState()
-    
+
+    FeedScreenContent(
+        pagingItems = pagingItems,
+        hasNewPosts = hasNewPosts,
+        onRefresh = { pagingItems.refresh() },
+        onNewPostsShown = { viewModel.onNewPostsShown() },
+        onCreatePostClick = { navController.navigate("create_post") },
+        onScrollChanged = { items, index -> viewModel.onScrollChanged(items, index) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedScreenContent(
+    pagingItems: LazyPagingItems<FeedItem>,
+    hasNewPosts: Boolean,
+    onRefresh: () -> Unit,
+    onNewPostsShown: () -> Unit,
+    onCreatePostClick: () -> Unit,
+    onScrollChanged: (List<FeedItem>, Int) -> Unit
+) {
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    // Observe scroll state for prefetching
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { index ->
+                val items = (0 until pagingItems.itemCount).mapNotNull { pagingItems[it] }
+                onScrollChanged(items, index)
+            }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Instagram Clone") },
                 actions = {
-                    IconButton(onClick = { navController.navigate("create_post") }) {
+                    IconButton(onClick = onCreatePostClick) {
                         Icon(Icons.Default.Add, contentDescription = "Create Post")
                     }
                 }
@@ -62,10 +114,10 @@ fun FeedScreen(
         }
     ) { paddingValues ->
         val isRefreshing = pagingItems.loadState.refresh is LoadState.Loading
-        
+
         PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { pagingItems.refresh() },
+            onRefresh = onRefresh,
             state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
@@ -73,7 +125,7 @@ fun FeedScreen(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 if (isRefreshing && pagingItems.itemCount == 0) {
-                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 } else {
@@ -82,7 +134,13 @@ fun FeedScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(pagingItems.itemCount) { index ->
+                        items(count = pagingItems.itemCount, key = { index ->
+                            when (val item = pagingItems.peek(index)) {
+                                is FeedItem.PostItem -> item.post.id
+                                is FeedItem.AdItem -> item.ad.id
+                                else -> index
+                            }
+                        }) { index ->
                             val item = pagingItems[index]
                             if (item != null) {
                                 when (item) {
@@ -125,15 +183,15 @@ fun FeedScreen(
                         }
                     }
                 }
-                
+
                 // New Posts Banner
                 if (hasNewPosts) {
-                     ExtendedFloatingActionButton(
+                    ExtendedFloatingActionButton(
                         text = { Text("New Posts") },
-                        icon = { Icon(Icons.Default.Add, contentDescription = null) }, 
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
                         onClick = {
-                            viewModel.onNewPostsShown()
-                            pagingItems.refresh()
+                            onNewPostsShown()
+                            onRefresh()
                             coroutineScope.launch {
                                 listState.animateScrollToItem(0)
                             }
@@ -147,11 +205,11 @@ fun FeedScreen(
                 }
             }
         }
-        
+
         // Initial Refresh Error Snackbar
         val refreshState = pagingItems.loadState.refresh
         if (refreshState is LoadState.Error && pagingItems.itemCount == 0) {
-             Box(
+            Box(
                 modifier = Modifier.fillMaxSize()
             ) {
                 Snackbar(
@@ -172,177 +230,7 @@ fun FeedScreen(
 }
 
 @Composable
-fun PostItem(post: Post) {
-    var isLiked by remember { mutableStateOf(false) }
-    var showOptions by remember { mutableStateOf(false) }
-    var showFullImage by remember { mutableStateOf(false) }
-    var doubleTapScale by remember { mutableFloatStateOf(1f) }
-    val doubleTapAnimation = rememberInfiniteTransition(label = "doubleTap")
-    val heartScale = doubleTapAnimation.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(300),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "heartScale"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = post.username,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                IconButton(onClick = { showOptions = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                }
-            }
-
-            // Post image with double tap to like
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-            ) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(post.imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Post image",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onDoubleTap = {
-                                    isLiked = true
-                                    doubleTapScale = 1f
-                                }
-                            )
-                        },
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Failed to load image",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                )
-
-                // Double tap heart animation
-                if (doubleTapScale != 1f) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .scale(heartScale.value),
-                        tint = Color.White
-                    )
-                }
-            }
-
-            // Actions
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = { isLiked = !isLiked }) {
-                    Icon(
-                        if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isLiked) "Unlike" else "Like",
-                        tint = if (isLiked) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                }
-            }
-
-            // Likes and caption
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(
-                    text = "${post.likes} likes",
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = post.caption,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-                Text(
-                    text = "View all ${post.comments.size} comments",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-    }
-
-    // Full screen image dialog
-    if (showFullImage) {
-        Dialog(onDismissRequest = { showFullImage = false }) {
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(post.imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = "Full size post image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f),
-                contentScale = ContentScale.Fit
-            )
-        }
-    }
-
-    // Options menu
-    if (showOptions) {
-        AlertDialog(
-            onDismissRequest = { showOptions = false },
-            title = { Text("Post Options") },
-            text = { Text("What would you like to do with this post?") },
-            confirmButton = {
-                TextButton(onClick = { showOptions = false }) {
-                    Text("Close")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun AdItem(ad: Ad) {
+private fun AdItem(ad: Ad) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -355,7 +243,11 @@ fun AdItem(ad: Ad) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("SPONSORED", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "SPONSORED",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(8.dp))
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -369,7 +261,11 @@ fun AdItem(ad: Ad) {
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(ad.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                ad.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
             Text(ad.content, style = MaterialTheme.typography.bodyMedium)
             Button(onClick = { /* Open Ad */ }, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Learn More")
@@ -378,4 +274,43 @@ fun AdItem(ad: Ad) {
     }
 }
 
+@Preview
+@Composable
+private fun FeedScreenPreview() {
+    val dummyPosts: List<FeedItem> = listOf(
+        FeedItem.PostItem(
+            Post(
+                id = "1",
+                username = "user1",
+                imageUrl = "https://example.com/image1.jpg",
+                caption = "Caption 1",
+                likes = 10,
+                comments = listOf(),
+                timestamp = System.currentTimeMillis()
+            )
+        ),
+        FeedItem.PostItem(
+            Post(
+                id = "2",
+                username = "user2",
+                imageUrl = "https://example.com/image2.jpg",
+                caption = "Caption 2",
+                likes = 20,
+                comments = listOf(),
+                timestamp = System.currentTimeMillis()
+            )
+        )
+    )
+    val pagingItems = flowOf(PagingData.from(dummyPosts)).collectAsLazyPagingItems()
 
+    MaterialTheme {
+        FeedScreenContent(
+            pagingItems = pagingItems,
+            hasNewPosts = true,
+            onRefresh = {},
+            onNewPostsShown = {},
+            onCreatePostClick = {},
+            onScrollChanged = { _, _ -> }
+        )
+    }
+}

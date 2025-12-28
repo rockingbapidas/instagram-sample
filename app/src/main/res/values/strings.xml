@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Instagram Clone</string>
-</resources> 
+    <string name="notification_channel_name">Instagram Notifications</string>
+    <string name="notification_channel_description">Notifications for likes, comments, follows, etc.</string>
+    <string name="notification_title_like">New Like</string>
+    <string name="notification_message_like">Someone liked your post</string>
+    <string name="notification_title_unlike">Unlike</string>
+    <string name="notification_message_unlike">Someone unliked your post</string>
+    <string name="notification_title_follow">New Follower</string>
+    <string name="notification_message_follow">Someone started following you</string>
+    <string name="notification_title_unfollow">Unfollow</string>
+    <string name="notification_message_unfollow">Someone unfollowed you</string>
+</resources>

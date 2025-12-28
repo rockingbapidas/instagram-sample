@@ -13,5 +13,6 @@ data class UserEntity(
     val bio: String,
     val profilePictureUrl: String,
     val followers: Int,
-    val following: Int
+    val following: Int,
+    val postCount: Int
 )

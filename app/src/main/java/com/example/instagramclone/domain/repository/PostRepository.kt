@@ -14,7 +14,7 @@ interface PostRepository {
     suspend fun createPost(imageUri: Uri, caption: String): Post
     suspend fun likePost(postId: String)
     suspend fun unlikePost(postId: String)
-    fun getUserPosts(userId: String): Flow<List<Post>>
+    fun getUserPosts(userId: String): Flow<PagingData<Post>>
     suspend fun refreshUserPosts(userId: String)
     suspend fun searchPosts(query: String): List<Post>
     suspend fun getComments(postId: String): List<Comment>

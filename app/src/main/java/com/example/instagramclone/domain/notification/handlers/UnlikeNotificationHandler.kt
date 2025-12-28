@@ -2,13 +2,17 @@ package com.example.instagramclone.domain.notification.handlers
 
 import android.content.Context
 import android.content.Intent
+import com.example.instagramclone.R
 import com.example.instagramclone.domain.model.Notification
 import com.example.instagramclone.domain.model.NotificationType
 import com.example.instagramclone.domain.notification.NotificationHandler
 import com.example.instagramclone.presentation.MainActivity
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class UnlikeNotificationHandler @Inject constructor() : NotificationHandler {
+class UnlikeNotificationHandler @Inject constructor(
+    @ApplicationContext private val context: Context
+) : NotificationHandler {
     override val notificationType: NotificationType = NotificationType.UNLIKE
 
     override fun getHandleIntent(context: Context, notification: Notification): Intent? {
@@ -29,13 +33,12 @@ class UnlikeNotificationHandler @Inject constructor() : NotificationHandler {
     }
 
     override fun getDefaultTitle(notification: Notification): String {
-        return notification.title.ifEmpty { "Unlike" }
+        return notification.title.ifEmpty { context.getString(R.string.notification_title_unlike) }
     }
 
     override fun getDefaultMessage(notification: Notification): String {
         return notification.message.ifEmpty {
-            "Someone unliked your post"
+            context.getString(R.string.notification_message_unlike)
         }
     }
 }
-

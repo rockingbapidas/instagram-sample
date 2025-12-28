@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-// import com.example.instagramclone.R // Uncomment when you have notification icon
+import com.example.instagramclone.R
 import com.example.instagramclone.domain.model.Notification
 import com.example.instagramclone.domain.notification.NotificationHandlerRegistry
 import com.example.instagramclone.presentation.MainActivity
@@ -31,10 +31,10 @@ class NotificationManager @Inject constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Instagram Notifications",
-                android.app.NotificationManager.IMPORTANCE_HIGH
+                context.getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for likes, comments, follows, etc."
+                description = context.getString(R.string.notification_channel_description)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -87,4 +87,3 @@ class NotificationManager @Inject constructor(
         private const val CHANNEL_ID = "instagram_notifications"
     }
 }
-

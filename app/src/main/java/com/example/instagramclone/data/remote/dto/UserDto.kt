@@ -18,7 +18,9 @@ data class UserDto(
     @SerializedName("followers")
     val followers: Int? = null,
     @SerializedName("following")
-    val following: Int? = null
+    val following: Int? = null,
+    @SerializedName("post_count")
+    val postCount: Int? = null
 )
 
 data class LoginRequest(

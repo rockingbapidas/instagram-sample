@@ -3,7 +3,6 @@ package com.example.instagramclone.data.mapper
 import com.example.instagramclone.data.local.entities.UserEntity
 import com.example.instagramclone.data.remote.dto.UserDto
 import com.example.instagramclone.domain.model.User
-import javax.inject.Inject
 
 object UserMapper {
     fun toDomain(dto: UserDto): User {
@@ -15,7 +14,8 @@ object UserMapper {
             bio = dto.bio ?: "",
             profilePictureUrl = dto.profilePictureUrl ?: "",
             followers = dto.followers ?: 0,
-            following = dto.following ?: 0
+            following = dto.following ?: 0,
+            postCount = dto.postCount ?: 0
         )
     }
 
@@ -28,7 +28,8 @@ object UserMapper {
             bio = entity.bio,
             profilePictureUrl = entity.profilePictureUrl,
             followers = entity.followers,
-            following = entity.following
+            following = entity.following,
+            postCount = entity.postCount
         )
     }
 
@@ -41,7 +42,8 @@ object UserMapper {
             bio = user.bio,
             profilePictureUrl = user.profilePictureUrl,
             followers = user.followers,
-            following = user.following
+            following = user.following,
+            postCount = user.postCount
         )
     }
 
@@ -54,7 +56,8 @@ object UserMapper {
             bio = dto.bio ?: "",
             profilePictureUrl = dto.profilePictureUrl ?: "",
             followers = dto.followers ?: 0,
-            following = dto.following ?: 0
+            following = dto.following ?: 0,
+            postCount = dto.postCount ?: 0
         )
     }
 }

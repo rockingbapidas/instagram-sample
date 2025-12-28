@@ -15,14 +15,14 @@ import com.example.instagramclone.presentation.screens.search.SearchScreen
 import com.example.instagramclone.presentation.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
-    object Splash : Screen("splash")
-    object Login : Screen("login")
-    object Register : Screen("register")
-    object Feed : Screen("feed")
-    object Search : Screen("search")
-    object CreatePost : Screen("create_post")
-    object Profile : Screen("profile")
-    object Notifications : Screen("notifications")
+    data object Splash : Screen("splash")
+    data object Login : Screen("login")
+    data object Register : Screen("register")
+    data object Feed : Screen("feed")
+    data object Search : Screen("search")
+    data object CreatePost : Screen("create_post")
+    data object Profile : Screen("profile")
+    data object Notifications : Screen("notifications")
 }
 
 @Composable
@@ -62,4 +62,3 @@ fun NavGraph(
         }
     }
 }
- 

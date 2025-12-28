@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -36,21 +37,45 @@ fun CreatePostScreen(
         uri?.let { viewModel.setSelectedImage(it) }
     }
     
+    CreatePostScreenContent(
+        caption = caption,
+        selectedImageUri = selectedImageUri,
+        isCreating = isCreating,
+        error = error,
+        onCaptionChange = { caption = it },
+        onImageSelect = { imagePicker.launch("image/*") },
+        onNavigateUp = { navController.navigateUp() },
+        onShare = {
+            viewModel.createPost(caption)
+            navController.navigateUp()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreatePostScreenContent(
+    caption: String,
+    selectedImageUri: Uri?,
+    isCreating: Boolean,
+    error: String?,
+    onCaptionChange: (String) -> Unit,
+    onImageSelect: () -> Unit,
+    onNavigateUp: () -> Unit,
+    onShare: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("New Post") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = onNavigateUp) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     TextButton(
-                        onClick = { 
-                            viewModel.createPost(caption)
-                            navController.navigateUp()
-                        },
+                        onClick = onShare,
                         enabled = selectedImageUri != null && !isCreating
                     ) {
                         Text("Share")
@@ -74,7 +99,7 @@ fun CreatePostScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(
-                        onClick = { imagePicker.launch("image/*") }
+                        onClick = onImageSelect
                     ) {
                         Icon(
                             Icons.Default.Add,
@@ -109,7 +134,7 @@ fun CreatePostScreen(
             
             OutlinedTextField(
                 value = caption,
-                onValueChange = { caption = it },
+                onValueChange = onCaptionChange,
                 label = { Text("Write a caption...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3
@@ -133,4 +158,21 @@ fun CreatePostScreen(
             }
         }
     }
-} 
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CreatePostScreenPreview() {
+    MaterialTheme {
+        CreatePostScreenContent(
+            caption = "",
+            selectedImageUri = null,
+            isCreating = false,
+            error = null,
+            onCaptionChange = {},
+            onImageSelect = {},
+            onNavigateUp = {},
+            onShare = {}
+        )
+    }
+}

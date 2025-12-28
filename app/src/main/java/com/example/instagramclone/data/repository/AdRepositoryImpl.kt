@@ -1,13 +1,13 @@
 package com.example.instagramclone.data.repository
 
 import com.example.instagramclone.domain.model.Ad
+import com.example.instagramclone.domain.repository.AdRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class AdRepository @Inject constructor() {
+class AdRepositoryImpl @Inject constructor(): AdRepository {
     
-    fun getAd(id: String): Ad {
+    override fun getAd(id: String): Ad {
         return Ad(
             id = id,
             title = "Sponsored Content $id",

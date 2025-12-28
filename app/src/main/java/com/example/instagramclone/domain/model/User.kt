@@ -8,5 +8,6 @@ data class User(
     val bio: String = "",
     val profilePictureUrl: String = "",
     val followers: Int = 0,
-    val following: Int = 0
+    val following: Int = 0,
+    val postCount: Int = 0
 )

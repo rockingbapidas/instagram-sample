@@ -18,10 +18,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun RegisterScreen(
@@ -51,11 +53,40 @@ fun RegisterScreen(
         }
     }
 
+    RegisterScreenContent(
+        uiState = uiState,
+        username = username,
+        email = email,
+        password = password,
+        onUsernameChange = viewModel::onUsernameChange,
+        onEmailChange = viewModel::onEmailChange,
+        onPasswordChange = viewModel::onPasswordChange,
+        onRegisterClick = viewModel::register,
+        onLoginClick = { navController.popBackStack() },
+        onClearError = viewModel::clearError
+    )
+}
+
+@Composable
+fun RegisterScreenContent(
+    uiState: RegisterUiState,
+    username: String,
+    email: String,
+    password: String,
+    onUsernameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onRegisterClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onClearError: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+
     Scaffold(
         snackbarHost = {
             if (uiState is RegisterUiState.Error) {
                 Snackbar {
-                    Text((uiState as RegisterUiState.Error).message)
+                    Text(uiState.message)
                 }
             }
         }
@@ -79,7 +110,7 @@ fun RegisterScreen(
             // Username field
             OutlinedTextField(
                 value = username,
-                onValueChange = viewModel::onUsernameChange,
+                onValueChange = onUsernameChange,
                 label = { Text("Username") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -98,7 +129,7 @@ fun RegisterScreen(
             // Email field
             OutlinedTextField(
                 value = email,
-                onValueChange = viewModel::onEmailChange,
+                onValueChange = onEmailChange,
                 label = { Text("Email") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -118,7 +149,7 @@ fun RegisterScreen(
             var passwordVisible by remember { mutableStateOf(false) }
             OutlinedTextField(
                 value = password,
-                onValueChange = viewModel::onPasswordChange,
+                onValueChange = onPasswordChange,
                 label = { Text("Password") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -129,7 +160,7 @@ fun RegisterScreen(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
-                        viewModel.register()
+                        onRegisterClick()
                     }
                 ),
                 trailingIcon = {
@@ -148,7 +179,7 @@ fun RegisterScreen(
 
             // Register button
             Button(
-                onClick = { viewModel.register() },
+                onClick = onRegisterClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -168,9 +199,7 @@ fun RegisterScreen(
 
             // Login link
             TextButton(
-                onClick = {
-                    navController.popBackStack()
-                },
+                onClick = onLoginClick,
                 enabled = uiState !is RegisterUiState.Loading
             ) {
                 Text(
@@ -179,5 +208,24 @@ fun RegisterScreen(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegisterScreenPreview() {
+    MaterialTheme {
+        RegisterScreenContent(
+            uiState = RegisterUiState.Idle,
+            username = "",
+            email = "",
+            password = "",
+            onUsernameChange = {},
+            onEmailChange = {},
+            onPasswordChange = {},
+            onRegisterClick = {},
+            onLoginClick = {},
+            onClearError = {}
+        )
     }
 }

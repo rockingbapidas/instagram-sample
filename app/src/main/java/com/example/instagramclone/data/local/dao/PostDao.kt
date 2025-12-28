@@ -24,8 +24,12 @@ interface PostDao {
     @Query("DELETE FROM posts")
     suspend fun deleteAllPosts()
 
+    @Query("DELETE FROM posts WHERE userId = :userId")
+    suspend fun deletePostsByUserId(userId: String)
+
+    @Transaction
     @Query("SELECT * FROM posts WHERE userId = :userId ORDER BY timestamp DESC")
-    fun getPostsByUserId(userId: String): Flow<List<PostWithComments>>
+    fun pagingSource(userId: String): PagingSource<Int, PostWithComments>
 
     @Query("SELECT * FROM posts ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestPost(): PostEntity?

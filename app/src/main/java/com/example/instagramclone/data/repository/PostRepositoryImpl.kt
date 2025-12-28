@@ -80,9 +80,14 @@ class PostRepositoryImpl @Inject constructor(
         api.unlikePost(postId)
     }
 
-    override fun getUserPosts(userId: String): Flow<List<Post>> {
-        return db.postDao().getPostsByUserId(userId).map { list ->
-            list.map { postWithComments ->
+    @OptIn(ExperimentalPagingApi::class)
+    override fun getUserPosts(userId: String): Flow<PagingData<Post>> {
+        return Pager(
+            config = PagingConfig(pageSize = 10),
+            remoteMediator = PostRemoteMediator(api, db, userId),
+            pagingSourceFactory = { db.postDao().pagingSource(userId) }
+        ).flow.map { pagingData ->
+            pagingData.map { postWithComments ->
                 PostMapper.toDomain(
                     postWithComments.post,
                     postWithComments.comments.map { it.toDomain() }
@@ -93,10 +98,8 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun refreshUserPosts(userId: String) {
         try {
-            // Assuming the API returns posts for the authenticated user (via token)
-            // If we needed posts for *any* user, the API would need a userId param.
-            val remotePosts = api.getUserPosts()
-            db.postDao().insertPosts(remotePosts.map { PostMapper.toEntity(it).copy(userId = userId) })
+            val response = api.getUserPosts(userId, 1, null)
+            db.postDao().insertPosts(response.items.map { PostMapper.toEntity(it).copy(userId = userId) })
         } catch (e: Exception) {
             e.printStackTrace()
         }

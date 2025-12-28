@@ -2,15 +2,19 @@ package com.example.instagramclone.presentation.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
+import com.example.instagramclone.domain.model.FeedItem
 import com.example.instagramclone.domain.model.Post
 import com.example.instagramclone.domain.model.User
+import com.example.instagramclone.domain.prefetch.MediaPrefetch
 import com.example.instagramclone.domain.usecase.auth.GetCurrentUserUseCase
 import com.example.instagramclone.domain.usecase.post.GetUserPostsUseCase
 import com.example.instagramclone.domain.usecase.auth.LogoutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,14 +22,24 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getUserPostsUseCase: GetUserPostsUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val mediaPrefetch: MediaPrefetch
 ) : ViewModel() {
 
     private val _profile = MutableStateFlow<User?>(null)
     val profile: StateFlow<User?> = _profile.asStateFlow()
 
-    private val _posts = MutableStateFlow<List<Post>>(emptyList())
-    val posts: StateFlow<List<Post>> = _posts.asStateFlow()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val posts: Flow<PagingData<FeedItem.PostItem>> = _profile
+        .flatMapLatest { user ->
+            if (user != null) {
+                getUserPostsUseCase(user.id)
+            } else {
+                flowOf(PagingData.empty())
+            }
+        }.map { pagingData ->
+            pagingData.map { post -> FeedItem.PostItem(post) }
+        }.cachedIn(viewModelScope)
 
     init {
         syncData()
@@ -34,28 +48,8 @@ class ProfileViewModel @Inject constructor(
     private fun syncData() {
         // Observe Profile
         viewModelScope.launch {
-             getCurrentUserUseCase().collect { user ->
-                 _profile.value = user
-                 if (user != null) {
-                     // Refresh posts when user is loaded
-                     try {
-                         getUserPostsUseCase.refresh(user.id)
-                     } catch (e: Exception) {
-                         // Ignore refresh error
-                     }
-                 }
-             }
-        }
-
-        // Observe Posts (Reactive to Profile changes)
-        viewModelScope.launch {
-            // Using collectLatest to switch to new user's posts if profile changes
-            _profile.collect { user ->
-                if (user != null) {
-                    getUserPostsUseCase(user.id).collect { userPosts ->
-                         _posts.value = userPosts
-                    }
-                }
+            getCurrentUserUseCase().collect { user ->
+                _profile.value = user
             }
         }
 
@@ -81,5 +75,9 @@ class ProfileViewModel @Inject constructor(
                 // Handle error
             }
         }
+    }
+
+    fun onScrollChanged(items: List<FeedItem>, firstVisibleIndex: Int) {
+        mediaPrefetch.onScrollChanged(items, firstVisibleIndex)
     }
 }

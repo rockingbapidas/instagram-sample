@@ -18,10 +18,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun LoginScreen(
@@ -49,11 +51,36 @@ fun LoginScreen(
         }
     }
 
+    LoginScreenContent(
+        uiState = uiState,
+        email = email,
+        password = password,
+        onEmailChange = viewModel::onEmailChange,
+        onPasswordChange = viewModel::onPasswordChange,
+        onLoginClick = viewModel::login,
+        onRegisterClick = { navController.navigate("register") },
+        onClearError = viewModel::clearError
+    )
+}
+
+@Composable
+fun LoginScreenContent(
+    uiState: LoginUiState,
+    email: String,
+    password: String,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onClearError: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+
     Scaffold(
         snackbarHost = {
             if (uiState is LoginUiState.Error) {
                 Snackbar {
-                    Text((uiState as LoginUiState.Error).message)
+                    Text(uiState.message)
                 }
             }
         }
@@ -77,7 +104,7 @@ fun LoginScreen(
             // Email field
             OutlinedTextField(
                 value = email,
-                onValueChange = viewModel::onEmailChange,
+                onValueChange = onEmailChange,
                 label = { Text("Email") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -97,7 +124,7 @@ fun LoginScreen(
             var passwordVisible by remember { mutableStateOf(false) }
             OutlinedTextField(
                 value = password,
-                onValueChange = viewModel::onPasswordChange,
+                onValueChange = onPasswordChange,
                 label = { Text("Password") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -108,7 +135,7 @@ fun LoginScreen(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
-                        viewModel.login()
+                        onLoginClick()
                     }
                 ),
                 trailingIcon = {
@@ -127,7 +154,7 @@ fun LoginScreen(
 
             // Login button
             Button(
-                onClick = { viewModel.login() },
+                onClick = onLoginClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -147,9 +174,7 @@ fun LoginScreen(
 
             // Register link
             TextButton(
-                onClick = {
-                    navController.navigate("register")
-                },
+                onClick = onRegisterClick,
                 enabled = uiState !is LoginUiState.Loading
             ) {
                 Text(
@@ -158,5 +183,22 @@ fun LoginScreen(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    MaterialTheme {
+        LoginScreenContent(
+            uiState = LoginUiState.Idle,
+            email = "",
+            password = "",
+            onEmailChange = {},
+            onPasswordChange = {},
+            onLoginClick = {},
+            onRegisterClick = {},
+            onClearError = {}
+        )
     }
 }

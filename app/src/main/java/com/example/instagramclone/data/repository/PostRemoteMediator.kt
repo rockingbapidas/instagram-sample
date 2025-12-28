@@ -6,7 +6,6 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
 import com.example.instagramclone.data.local.AppDatabase
-import com.example.instagramclone.data.local.entities.PostEntity
 import com.example.instagramclone.data.local.entities.PostWithComments
 import com.example.instagramclone.data.local.entities.RemoteKeysEntity
 import com.example.instagramclone.data.mapper.PostMapper
@@ -17,7 +16,8 @@ import java.io.IOException
 @OptIn(ExperimentalPagingApi::class)
 class PostRemoteMediator(
     private val api: PostApi,
-    private val db: AppDatabase
+    private val db: AppDatabase,
+    private val userId: String? = null
 ) : RemoteMediator<Int, PostWithComments>() {
 
     override suspend fun load(
@@ -26,8 +26,6 @@ class PostRemoteMediator(
     ): MediatorResult {
         val cursor = when (loadType) {
             LoadType.REFRESH -> {
-                val remoteKeys = getRemoteKeyClosestToCurrentPosition(state)
-                remoteKeys?.nextKey // or null
                 null
             }
 
@@ -49,16 +47,26 @@ class PostRemoteMediator(
         }
 
         try {
-            val page = 1
-            val apiResponse = api.getPosts(page, cursor)
+            val page = 1 // Cursor-based API usually ignores this or uses it as start
+            val apiResponse = if (userId != null) {
+                api.getUserPosts(userId, page, cursor)
+            } else {
+                api.getPosts(page, cursor)
+            }
 
             val posts = apiResponse.items
             val endOfPaginationReached = apiResponse.nextCursor == null
 
             db.withTransaction {
                 if (loadType == LoadType.REFRESH) {
-                    db.remoteKeysDao().clearRemoteKeys()
-                    db.postDao().deleteAllPosts()
+                    if (userId != null) {
+                        // If it's for a specific user, we might only want to clear that user's posts
+                        db.remoteKeysDao().clearRemoteKeys() // For simplicity, clearing all keys
+                        db.postDao().deletePostsByUserId(userId)
+                    } else {
+                        db.remoteKeysDao().clearRemoteKeys()
+                        db.postDao().deleteAllPosts()
+                    }
                 }
 
                 val keys = posts.map { post ->
@@ -70,7 +78,9 @@ class PostRemoteMediator(
                 }
 
                 db.remoteKeysDao().insertAll(keys)
-                db.postDao().insertPosts(posts.map { PostMapper.toEntity(it) })
+                db.postDao().insertPosts(posts.map { 
+                    PostMapper.toEntity(it).copy(userId = userId) 
+                })
             }
             return MediatorResult.Success(endOfPaginationReached = endOfPaginationReached)
         } catch (exception: IOException) {
@@ -92,13 +102,5 @@ class PostRemoteMediator(
             ?.let { postWithComments ->
                 db.remoteKeysDao().remoteKeysPostId(postWithComments.post.id)
             }
-    }
-
-    private suspend fun getRemoteKeyClosestToCurrentPosition(state: PagingState<Int, PostWithComments>): RemoteKeysEntity? {
-        return state.anchorPosition?.let { position ->
-            state.closestItemToPosition(position)?.post?.id?.let { repoId ->
-                db.remoteKeysDao().remoteKeysPostId(repoId)
-            }
-        }
     }
 }
